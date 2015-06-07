@@ -48,7 +48,7 @@ namespace AmazingCurveEditor
         }
     }
 
-    [KSPAddon(KSPAddon.Startup.EditorAny, false)]
+    [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     public class AmazingCurveEditor : MonoBehaviour
     {
         private int texWidth = 512;
@@ -62,6 +62,7 @@ namespace AmazingCurveEditor
         private Vector2 scrollPos = new Vector2();
         private string textVersion;
         private bool showUI;
+        private string keyName = "key";
 
         public void Start()
         {
@@ -77,8 +78,14 @@ namespace AmazingCurveEditor
             if (graph != null && showUI)
             {
                 GUI.skin = AssetBase.GetGUISkin("KSP window 2");
-                winPos = GUILayout.Window(9384, winPos, WindowGUI, "MuMech CurveEd");
+                winPos = GUILayout.Window(9384, winPos, WindowGUI, "Amazing Curve Editor");
             }
+        }
+
+        private void OnDestroy()
+        {
+            if (graph != null)
+                Destroy(graph);
         }
 
         private void WindowGUI(int windowID)
@@ -165,10 +172,18 @@ namespace AmazingCurveEditor
             GUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
             if (GUILayout.Button("Add Node"))
             {
-                points.Add(new FloatString4(points.Last().floats.x + 1, points.Last().floats.y, points.Last().floats.z,
-                    points.Last().floats.w));
+                if (points.Count > 0)
+                {
+                    points.Add(new FloatString4(points.Last().floats.x + 1, points.Last().floats.y, points.Last().floats.z,points.Last().floats.w));
+                }
+                else
+                {
+                    points.Add(new FloatString4(0, 0, 0, 0));
+                }
                 curveNeedsUpdate = true;
             }
+            keyName = GUILayout.TextField(keyName, GUILayout.Width(80));
+
             GUILayout.EndHorizontal();
 
             string newT = GUILayout.TextArea(textVersion, GUILayout.ExpandWidth(true), GUILayout.Height(100));
@@ -217,7 +232,7 @@ namespace AmazingCurveEditor
 
         private void Update()
         {
-            if (GameSettings.MODIFIER_KEY.GetKey() && Input.GetKeyDown(KeyCode.F5))
+            if (GameSettings.MODIFIER_KEY.GetKey() && Input.GetKeyDown(KeyCode.P))
             {
                 showUI = !showUI;
             }
@@ -233,7 +248,7 @@ namespace AmazingCurveEditor
             string buff = "";
             foreach (FloatString4 p in points)
             {
-                buff += "key = " + p.floats.x + " " + p.floats.y + " " + p.floats.z + " " + p.floats.w + "\n";
+                buff += keyName + " = " + p.floats.x + " " + p.floats.y + " " + p.floats.z + " " + p.floats.w + "\n";
             }
             return buff;
         }
