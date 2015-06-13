@@ -54,6 +54,9 @@ namespace AmazingCurveEditor
         private int texWidth = 512;
         private int texHeight = 128;
 
+        const int GraphLabels = 4;
+        const float labelSpace = 20f * (GraphLabels + 1) / GraphLabels;
+
         private List<FloatString4> points = new List<FloatString4>();
         private FloatCurve curve = new FloatCurve();
         private bool curveNeedsUpdate = false;
@@ -63,6 +66,8 @@ namespace AmazingCurveEditor
         private string textVersion;
         private bool showUI;
         private string keyName = "key";
+        private float minY;
+        private float maxY;
 
         public void Start()
         {
@@ -90,9 +95,24 @@ namespace AmazingCurveEditor
 
         private void WindowGUI(int windowID)
         {
-            GUILayout.BeginVertical();
-            GUILayout.Label(graph, GUILayout.Width(512), GUILayout.Height(128));
+            GUILayout.BeginHorizontal(GUILayout.Height(texHeight));
+
+            Vector2 sizeMax = GUI.skin.label.CalcSize(new GUIContent(maxY.ToString("F3")));
+            Vector2 sizeMin = GUI.skin.label.CalcSize(new GUIContent(minY.ToString("F3")));
+
+            GUILayout.BeginVertical(GUILayout.MinWidth( Mathf.Max(sizeMin.x, sizeMax.x)));
+
+            for (int i = 0; i <= GraphLabels; i++)
+            {
+                GUILayout.Label((maxY - (maxY - minY) * i / GraphLabels).ToString("F3"), new GUIStyle(GUI.skin.label) { wordWrap = false });
+                if (i != GraphLabels) //only do it if it's not the last one
+                    GUILayout.Space(texHeight / GraphLabels - labelSpace);
+            }
             GUILayout.EndVertical();
+
+            GUILayout.Box(graph);
+
+            GUILayout.EndHorizontal();
 
             FloatString4 excludePoint = null;
 
@@ -201,8 +221,8 @@ namespace AmazingCurveEditor
 
             curve = new FloatCurve();
 
-            float minY = float.MaxValue;
-            float maxY = float.MinValue;
+            minY = float.MaxValue;
+            maxY = float.MinValue;
 
             foreach (FloatString4 v in points)
             {
@@ -217,13 +237,23 @@ namespace AmazingCurveEditor
                 {
                     graph.SetPixel(x, y, Color.black);
                 }
-                float fY = curve.Evaluate(curve.minTime + curve.maxTime * (float) x / (float) (texWidth - 1));
+                float fY = curve.Evaluate(curve.minTime + curve.maxTime * x / (texWidth - 1));
                 minY = Mathf.Min(minY, fY);
                 maxY = Mathf.Max(maxY, fY);
             }
+
             for (int x = 0; x < texWidth; x++)
             {
-                float fY = curve.Evaluate(curve.minTime + curve.maxTime * (float) x / (float) (texWidth - 1));
+                float step = texHeight / (float)GraphLabels;
+                for (int y = 0; y < GraphLabels; y++)
+                {
+                    graph.SetPixel(x, Mathf.RoundToInt(y * step), Color.gray);
+                }
+            }
+
+            for (int x = 0; x < texWidth; x++)
+            {
+                float fY = curve.Evaluate(curve.minTime + curve.maxTime * x / (texWidth - 1));
                 graph.SetPixel(x, Mathf.RoundToInt((fY - minY) / (maxY - minY) * (texHeight - 1)), Color.green);
             }
             graph.Apply();
