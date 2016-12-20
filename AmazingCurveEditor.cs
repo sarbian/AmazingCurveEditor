@@ -82,7 +82,6 @@ namespace AmazingCurveEditor
         {
             if (graph != null && showUI)
             {
-                GUI.skin = AssetBase.GetGUISkin("KSP window 2");
                 winPos = GUILayout.Window(9384, winPos, WindowGUI, "Amazing Curve Editor");
             }
         }
