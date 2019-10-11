@@ -48,7 +48,7 @@ namespace AmazingCurveEditor
         }
     }
 
-    [KSPAddon(KSPAddon.Startup.EveryScene, false)]
+    [KSPAddon(KSPAddon.Startup.Instantly, false)]
     public class AmazingCurveEditor : MonoBehaviour
     {
         private int texWidth = 512;
@@ -69,12 +69,26 @@ namespace AmazingCurveEditor
         private float minY;
         private float maxY;
 
+        bool sort = true;
+
+        private void Awake()
+        {
+            DontDestroyOnLoad(this);
+        }
+
         public void Start()
         {
             winPos = new Rect(Screen.width / 2, Screen.height / 2, 512, 400);
             graph = new Texture2D(texWidth, texHeight, TextureFormat.RGB24, false, true);
-            points.Add(new FloatString4(0, 0, 0, 0.02f));
-            points.Add(new FloatString4(100, 1, 0.02f, 0));
+            if (sort)
+            {
+                points.Add(new FloatString4(0, 0, 0, 0.02f));
+                points.Add(new FloatString4(100, 1, 0.02f, 0));
+            } else
+            {
+                points.Add(new FloatString4(0, 0, 0, 0));
+                points.Add(new FloatString4(1, 1, 0, 0));
+            }
             UpdateCurve();
         }
 
@@ -82,6 +96,7 @@ namespace AmazingCurveEditor
         {
             if (graph != null && showUI)
             {
+               // GUI.skin = HighLogic.Skin;
                 winPos = GUILayout.Window(9384, winPos, WindowGUI, "Amazing Curve Editor");
             }
         }
@@ -189,6 +204,27 @@ namespace AmazingCurveEditor
             }
 
             GUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
+            sort = GUILayout.Toggle(sort, "Sort");
+            if (GUILayout.Button("New Curve"))
+            {
+                points.Clear();
+                textVersion = "";
+                curveNeedsUpdate = true;
+            }
+            if (GUILayout.Button("Smooth Tangents"))
+            {
+                SmoothTangents();
+            }
+            if (GUILayout.Button("Copy out"))
+            {
+                GUIUtility.systemCopyBuffer = textVersion;
+            }
+            if (GUILayout.Button("Paste in"))
+            {
+                textVersion = GUIUtility.systemCopyBuffer;
+                StringToCurve(textVersion);
+                curveNeedsUpdate = true;
+            }
             if (GUILayout.Button("Add Node"))
             {
                 if (points.Count > 0)
@@ -214,9 +250,43 @@ namespace AmazingCurveEditor
             GUI.DragWindow();
         }
 
+        private void SmoothTangents()
+        {
+            var floatCurve = new FloatCurve();
+            float x, y, z, w;
+            foreach (FloatString4 p in points)
+            {
+                float.TryParse(p.strings[0], out x);
+                float.TryParse(p.strings[1], out y);
+                float.TryParse(p.strings[2], out z);
+                float.TryParse(p.strings[3], out w);
+                floatCurve.Add(x, y);
+            }
+            for (int i = 0; i < floatCurve.Curve.length; i++)
+            {
+                floatCurve.Curve.SmoothTangents(i, 0);
+            }
+            points = new List<FloatString4>();
+            ConfigNode node = new ConfigNode();
+            floatCurve.Save(node);
+
+            var keys = node.GetValuesList("key");
+            foreach (var s in keys)
+            {
+                var values = s.Split(' ').ToList();
+                points.Add(new FloatString4(
+                    float.Parse(values[0]),
+                    float.Parse(values[1]),
+                    float.Parse(values[2]),
+                    float.Parse(values[3])));
+            }
+            curveNeedsUpdate = true;
+        }
+
         private void UpdateCurve()
         {
-            points.Sort();
+            if (sort)
+                points.Sort();
 
             curve = new FloatCurve();
 
@@ -228,7 +298,7 @@ namespace AmazingCurveEditor
                 curve.Add(v.floats.x, v.floats.y, v.floats.z, v.floats.w);
             }
 
-            textVersion = CurveToString();
+            textVersion = CurveToString();            
 
             for (int x = 0; x < texWidth; x++)
             {
@@ -289,13 +359,22 @@ namespace AmazingCurveEditor
             string[] lines = data.Split('\n');
             foreach (string line in lines)
             {
-                string[] pcs = line.Split(new char[] {'=', ' '}, StringSplitOptions.RemoveEmptyEntries);
-                if ((pcs.Length >= 5) && (pcs[0] == "key"))
+                string[] pcs = line.Trim().Split(new char[] {'=', ' ', '\t'}, StringSplitOptions.RemoveEmptyEntries);
+                if ((pcs.Length >= 3) && (pcs[0] == keyName))
                 {
                     FloatString4 nv = new FloatString4();
-                    nv.strings = new string[] {pcs[1], pcs[2], pcs[3], pcs[4]};
-                    nv.UpdateFloats();
-                    points.Add(nv);
+                    if (pcs.Length >= 5)
+                    {
+                        nv.strings = new string[] { pcs[1], pcs[2], pcs[3], pcs[4] };
+                    }
+                    else
+                    {
+                        
+                        nv.strings = new string[] { pcs[1], pcs[2], "0", "0" };
+                    }
+                        nv.UpdateFloats();
+                        points.Add(nv);
+                    
                 }
             }
 

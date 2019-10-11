@@ -1,0 +1,15 @@
+Trims leading spaces when pasting in text
+Changed for hardcoded "key =" for pasting to whatever is specificied for the key
+
+
+LinuxGuruGamer Changes
+	Added button to start a new FloatCurve (ie:  delete all entries)
+	Added button to smooth tangents of current curve
+	Added import of float curves which don't have tangents (only 2 fields)
+	Allowed tabs when pasting in for conversion
+	Added button to copy to clipboard
+	Added button to paste from clipboard
+	Added sort toggle, inspired by @HappyFaceIindustries patch
+
+This includes @4x4cheesecake's fix for the VAB
+
